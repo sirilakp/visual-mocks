@@ -214,6 +214,18 @@
       .card-header > div:last-child .btn { flex: 1; justify-content: center; }
     }
 
+    /* ── Pagination buttons (reuse index.html style) ── */
+    .cm-page-btn {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-2); font-family: var(--font); transition: all .1s;
+    }
+    .cm-page-btn:hover { border-color: var(--pink); color: var(--pink); }
+    .cm-page-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+    .cm-page-btn:disabled { opacity: .35; cursor: default; pointer-events: none; }
+
     /* ── CONTACTMOMENT MODAL ── */
     .modal-backdrop {
       display: none;
@@ -476,12 +488,12 @@
 
 <!-- TOP NAV -->
 <nav class="topnav">
-  <a class="nav-logo" href="dossiers.html">
+  <a class="nav-logo" href="index.html">
     <div class="nav-logo-mark">iH</div>
     <div class="nav-logo-text">inholland <small>DGRS</small></div>
   </a>
   <div class="nav-links">
-    <a class="nav-lnk active" href="dossiers.html">Dossiers</a>
+    <a class="nav-lnk active" href="index.html">Dossiers</a>
     <a class="nav-lnk" href="#">Mijn gesprekken</a>
     <a class="nav-lnk" href="#">Openstaande acties</a>
     <a class="nav-lnk" href="#">Rapportages</a>
@@ -501,7 +513,7 @@
   <div class="breadcrumb">
     <span class="more">···</span>
     <span class="sep">›</span>
-    <a href="dossiers.html">Dossiers</a>
+    <a href="index.html">Dossiers</a>
     <span class="sep">›</span>
     <span class="current">John Doe</span>
   </div>
@@ -671,11 +683,11 @@
         <div class="card-header">
           <div>
             <div class="card-title">Contactmomenten student</div>
-            <div class="card-subtitle">1 contactmoment</div>
+            <div class="card-subtitle" id="cmSubtitle">11 contactmomenten</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn btn-ghost btn-sm">⬇ Exporteer</button>
-            <button class="btn btn-pink btn-sm">+ Nieuw contactmoment</button>
+            <button class="btn btn-pink btn-sm" onclick="openContactmoment()">+ Nieuw contactmoment</button>
           </div>
         </div>
         <div class="tbl-wrap">
@@ -692,27 +704,20 @@
                 <th></th>
               </tr>
             </thead>
-            <tbody>
-              <tr onclick="openContactmoment()" style="cursor:pointer">
-                <td><div class="type-icon gesprek">💬</div></td>
-                <td style="font-weight:600;color:var(--text-1)">04-06-2026</td>
-                <td>A. Gebruiker</td>
-                <td>Bijzondere omstandigheden</td>
-                <td>Bestuursactiviteiten</td>
-                <td style="font-size:12px;color:var(--text-3)">test notitie...</td>
-                <td><span class="pill pill-gray" style="font-size:10px">Geen actie</span></td>
-                <td>
-                  <div class="row-actions" style="opacity:1">
-                    <div class="btn-icon">✎</div>
-                    <div class="btn-icon">✕</div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="cmTbody"></tbody>
           </table>
         </div>
         <div class="card-footer">
-          <span>1 van 1</span>
+          <div class="page-size" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3)">
+            Rijen:
+            <select id="cmPageSize" onchange="cmRender()" style="border:1px solid var(--border);border-radius:5px;padding:3px 6px;font-family:var(--font);font-size:12px;background:var(--surface);color:var(--text-2);outline:none">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+            </select>
+            <span id="cmRangeLabel"></span>
+          </div>
+          <div style="display:flex;gap:3px" id="cmPagBtns"></div>
         </div>
       </div>
 
@@ -900,6 +905,92 @@
 </div><!-- end modal-backdrop -->
 
 <script>
+  /* ── Contactmomenten data ── */
+  var cmData = [
+    { type:'gesprek', icon:'💬', datum:'04-06-2026', decaan:'A. Gebruiker',    hoofd:'Bijzondere omstandigheden', sub:'Bestuursactiviteiten',         verslag:'test notitie...',               actie:'Geen actie',  pillClass:'pill-gray'   },
+    { type:'email',   icon:'✉',  datum:'18-05-2026', decaan:'A. Gebruiker',    hoofd:'Studievoortgang',           sub:'Vertraging door omstandigheden', verslag:'Emailwisseling besproken.',      actie:'Opvolging',   pillClass:'pill-orange' },
+    { type:'telefoon',icon:'📞', datum:'02-05-2026', decaan:'Mark Peters',     hoofd:'Welzijn',                   sub:'Psychische klachten',            verslag:'Telefonisch contact gehad.',     actie:'Doorverwijzing', pillClass:'pill-blue' },
+    { type:'gesprek', icon:'💬', datum:'14-04-2026', decaan:'A. Gebruiker',    hoofd:'Financieel',                sub:'Studiefinanciering',             verslag:'Afspraak ingepland.',            actie:'Geen actie',  pillClass:'pill-gray'   },
+    { type:'gesprek', icon:'💬', datum:'28-03-2026', decaan:'Anna de Vries',   hoofd:'Bijzondere omstandigheden', sub:'Ziekte/beperking',               verslag:'Situatie besproken.',            actie:'BSA advies',  pillClass:'pill-pink'   },
+    { type:'email',   icon:'✉',  datum:'10-03-2026', decaan:'A. Gebruiker',    hoofd:'Studievoortgang',           sub:'Studieachterstand',              verslag:'Vervolgmail gestuurd.',          actie:'Opvolging',   pillClass:'pill-orange' },
+    { type:'telefoon',icon:'📞', datum:'21-02-2026', decaan:'Mark Peters',     hoofd:'Welzijn',                   sub:'Familieomstandigheden',          verslag:'Korte check-in.',                actie:'Geen actie',  pillClass:'pill-gray'   },
+    { type:'gesprek', icon:'💬', datum:'05-02-2026', decaan:'A. Gebruiker',    hoofd:'Bijzondere omstandigheden', sub:'Bestuursactiviteiten',           verslag:'Plan gemaakt.',                  actie:'Doorverwijzing', pillClass:'pill-blue' },
+    { type:'gesprek', icon:'💬', datum:'18-01-2026', decaan:'Anna de Vries',   hoofd:'Financieel',                sub:'Studiefinanciering',             verslag:'Beurs aanvraag besproken.',      actie:'Geen actie',  pillClass:'pill-gray'   },
+    { type:'email',   icon:'✉',  datum:'30-12-2025', decaan:'A. Gebruiker',    hoofd:'Studievoortgang',           sub:'Vertraging door omstandigheden', verslag:'Nieuwjaarsmail.',                actie:'Opvolging',   pillClass:'pill-orange' },
+    { type:'gesprek', icon:'💬', datum:'12-12-2025', decaan:'Rob Janssen',     hoofd:'Welzijn',                   sub:'Psychische klachten',            verslag:'Verwezen naar studentpsycholoog.', actie:'Doorverwijzing', pillClass:'pill-blue' },
+  ];
+
+  var cmPage = 1;
+
+  function cmRender() {
+    var size  = parseInt(document.getElementById('cmPageSize').value);
+    var total = cmData.length;
+    var pages = Math.ceil(total / size);
+    if (cmPage > pages) cmPage = pages;
+
+    var start = (cmPage - 1) * size;
+    var end   = Math.min(start + size, total);
+    var slice = cmData.slice(start, end);
+
+    /* Rows */
+    var tbody = document.getElementById('cmTbody');
+    tbody.innerHTML = slice.map(function(r) {
+      return '<tr onclick="openContactmoment()" style="cursor:pointer">' +
+        '<td><div class="type-icon ' + r.type + '">' + r.icon + '</div></td>' +
+        '<td style="font-weight:600;color:var(--text-1)">' + r.datum + '</td>' +
+        '<td>' + r.decaan + '</td>' +
+        '<td>' + r.hoofd + '</td>' +
+        '<td>' + r.sub + '</td>' +
+        '<td style="font-size:12px;color:var(--text-3)">' + r.verslag + '</td>' +
+        '<td><span class="pill ' + r.pillClass + '" style="font-size:10px">' + r.actie + '</span></td>' +
+        '<td><div class="row-actions" style="opacity:1"><div class="btn-icon">✎</div><div class="btn-icon">✕</div></div></td>' +
+        '</tr>';
+    }).join('');
+
+    /* Range label */
+    document.getElementById('cmRangeLabel').textContent = (start + 1) + '–' + end + ' van ' + total;
+
+    /* Pagination buttons */
+    var btns = document.getElementById('cmPagBtns');
+    btns.innerHTML = '';
+
+    function makeBtn(label, page, disabled, active) {
+      var b = document.createElement('button');
+      b.className = 'cm-page-btn' + (active ? ' active' : '');
+      b.textContent = label;
+      if (disabled) b.disabled = true;
+      b.onclick = function() { cmPage = page; cmRender(); };
+      return b;
+    }
+
+    btns.appendChild(makeBtn('‹', cmPage - 1, cmPage === 1, false));
+
+    /* Show max 5 page numbers with ellipsis */
+    var range = [];
+    for (var i = 1; i <= pages; i++) {
+      if (i === 1 || i === pages || (i >= cmPage - 1 && i <= cmPage + 1)) {
+        range.push(i);
+      }
+    }
+    var prev = null;
+    range.forEach(function(i) {
+      if (prev !== null && i - prev > 1) {
+        var ellipsis = document.createElement('button');
+        ellipsis.className = 'cm-page-btn';
+        ellipsis.textContent = '…';
+        ellipsis.disabled = true;
+        btns.appendChild(ellipsis);
+      }
+      btns.appendChild(makeBtn(i, i, false, i === cmPage));
+      prev = i;
+    });
+
+    btns.appendChild(makeBtn('›', cmPage + 1, cmPage === pages, false));
+  }
+
+  /* Initialise on load */
+  document.addEventListener('DOMContentLoaded', cmRender);
+
   function openContactmoment() {
     document.getElementById('contactmomentModal').classList.add('open');
     document.body.style.overflow = 'hidden';
