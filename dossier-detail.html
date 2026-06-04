@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGRS – Dossier: John Doe</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    /* Constrain page width to match other pages */
+    .page { max-width: 1050px !important; }
+
+    /* Two-column detail layout */
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    /* LEFT: student card */
+    .student-card { position: sticky; top: 72px; }
+    .student-photo-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 24px 18px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .student-photo-container {
+      position: relative;
+      width: 80px; height: 80px;
+      margin-bottom: 14px;
+    }
+    .student-photo {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--bg); border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: var(--text-3);
+      overflow: hidden;
+    }
+    .photo-edit {
+      position: absolute; bottom: 0; right: 0;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--pink); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; cursor: pointer; border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(229,0,125,.35);
+    }
+    .photo-edit:hover { background: var(--pink-dark); }
+    .student-name-big { font-size: 16px; font-weight: 800; color: var(--text-1); text-align: center; }
+    .student-nr-big { font-size: 12px; color: var(--text-3); margin-top: 3px; text-align: center; }
+
+    .student-info { padding: 16px 18px; }
+    .info-row {
+      display: flex; align-items: baseline;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+    .info-value { font-size: 13px; color: var(--text-1); text-align: right; font-weight: 500; }
+    .info-value.muted { color: var(--text-3); font-style: italic; }
+    .info-value a { color: var(--pink); text-decoration: none; }
+    .info-value a:hover { text-decoration: underline; }
+    .info-edit { color: var(--pink); font-size: 11px; cursor: pointer; opacity: 0; transition: opacity .1s; }
+    .info-row:hover .info-edit { opacity: 1; }
+
+    .student-actions { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; }
+    .action-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 9px 12px; border-radius: 8px;
+      font-family: var(--font); font-size: 12px; font-weight: 700;
+      cursor: pointer; border: none; transition: all .12s;
+      text-align: center;
+    }
+    .action-btn.pink { background: var(--pink); color: #fff; }
+    .action-btn.pink:hover { background: var(--pink-dark); }
+    .action-btn.outline { background: var(--surface); color: var(--text-2); border: 1px solid var(--border); }
+    .action-btn.outline:hover { border-color: var(--pink); color: var(--pink); }
+
+    /* RIGHT: content */
+    .right-col { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Status bar */
+    .status-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      flex-wrap: wrap;
+    }
+    .status-label { font-size: 13px; color: var(--text-2); }
+    .status-label strong { color: var(--text-1); }
+    .status-bar-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+    .action-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 6px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-2);
+      transition: all .12s;
+    }
+    .action-chip:hover { border-color: var(--pink); color: var(--pink); }
+    .action-chip .chip-icon { font-size: 13px; }
+
+    /* Section cards */
+    .section-textarea {
+      width: 100%; padding: 12px;
+      border: 1px solid var(--border); border-radius: 7px;
+      font-family: var(--font); font-size: 13px; color: var(--text-1);
+      background: var(--bg); resize: vertical; min-height: 90px;
+      outline: none; line-height: 1.5;
+    }
+    .section-textarea:focus { border-color: var(--pink); background: var(--surface); box-shadow: 0 0 0 3px rgba(229,0,125,.08); }
+
+    /* Add row */
+    .add-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 2px;
+      font-size: 12px; font-weight: 600; color: var(--pink);
+      cursor: pointer; border-radius: 6px;
+    }
+    .add-row:hover { background: var(--pink-faint); padding-left: 8px; }
+    .add-row .plus {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--pink-light); color: var(--pink);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+    }
+
+    /* Bijlage table */
+    .bijlage-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .bijlage-row:last-child { border-bottom: none; }
+    .bijlage-icon { font-size: 18px; }
+    .bijlage-name { font-size: 13px; font-weight: 600; color: var(--blue); text-decoration: none; cursor: pointer; flex: 1; }
+    .bijlage-name:hover { text-decoration: underline; }
+    .bijlage-meta { font-size: 11px; color: var(--text-3); }
+    .ver-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--pink); color: #fff; font-size: 10px; font-weight: 800;
+    }
+    .del-btn {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: none; background: none; cursor: pointer;
+      color: var(--text-3); font-size: 14px; transition: color .1s;
+    }
+    .del-btn:hover { color: var(--red); }
+
+    /* Contactmomenten table */
+    .type-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 6px; font-size: 14px;
+    }
+    .type-icon.gesprek { background: var(--pink-light); }
+    .type-icon.email { background: var(--blue-bg); }
+    .type-icon.telefoon { background: var(--green-bg); }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .detail-layout {
+        grid-template-columns: 230px 1fr;
+        gap: 14px;
+      }
+      .status-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .status-bar-actions { margin-left: 0; }
+    }
+
+    @media (max-width: 768px) {
+      /* Stack to single column */
+      .detail-layout {
+        grid-template-columns: 1fr;
+      }
+      .student-card {
+        position: static; /* un-sticky on mobile */
+      }
+      .student-photo-wrap { padding: 18px 14px 14px; }
+      .student-photo { width: 64px; height: 64px; font-size: 22px; }
+      .student-name-big { font-size: 14px; }
+      /* Student info: 2-col grid instead of flex rows */
+      .info-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+      }
+      .info-value { text-align: left; }
+      /* Status bar */
+      .status-bar { padding: 10px 12px; }
+      .status-bar-actions { flex-wrap: wrap; gap: 6px; }
+      /* Contactmomenten table: scroll */
+      .right-col .tbl th:nth-child(5),
+      .right-col .tbl td:nth-child(5) { display: none; } /* Subonderwerp */
+      .right-col .tbl th:nth-child(6),
+      .right-col .tbl td:nth-child(6) { display: none; } /* Gespreksverslag */
+      .right-col .tbl th:nth-child(7),
+      .right-col .tbl td:nth-child(7) { display: none; } /* Actie */
+      /* Bijlage grid */
+      [style*="grid-template-columns:1fr 60px 80px 110px 60px"] {
+        grid-template-columns: 1fr 40px 80px !important;
+      }
+      [style*="grid-template-columns:1fr 60px 80px 110px 60px"] > :nth-child(4) { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .student-actions { flex-direction: row; flex-wrap: wrap; }
+      .student-actions .action-btn { flex: 1; min-width: 100px; font-size: 11px; padding: 7px 8px; }
+      .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .card-header > div:last-child { width: 100%; display: flex; gap: 6px; }
+      .card-header > div:last-child .btn { flex: 1; justify-content: center; }
+    }
+
+    /* ── CONTACTMOMENT MODAL ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 500;
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.22);
+      width: 100%; max-width: 860px;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .modal-title { font-size: 14px; font-weight: 800; color: var(--text-1); }
+    .modal-close {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 1px solid var(--border); background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--text-3); cursor: pointer;
+      transition: all .12s; font-family: var(--font);
+    }
+    .modal-close:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+      flex: 1;
+    }
+    .modal-left {
+      padding: 20px;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .modal-right {
+      padding: 20px;
+      overflow-y: auto;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .modal-field { display: flex; flex-direction: column; gap: 5px; }
+    .modal-field-label {
+      font-size: 11px; font-weight: 700; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    .modal-input, .modal-select {
+      padding: 8px 11px;
+      border: 1px solid var(--border); border-radius: 7px;
+      font-family: var(--font); font-size: 13px; color: var(--text-1);
+      background: var(--surface); outline: none; transition: border-color .12s;
+      width: 100%;
+    }
+    .modal-input:focus, .modal-select:focus {
+      border-color: var(--pink); box-shadow: 0 0 0 3px rgba(229,0,125,.08);
+    }
+    .modal-select { cursor: pointer; }
+    .modal-input[type="datetime-local"] { cursor: pointer; }
+
+    /* Topic add row */
+    .topic-add-row {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .topic-add-row .modal-select { flex: 1; }
+    .topic-add-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 12px; border-radius: 7px;
+      background: var(--pink-light); color: var(--pink);
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      border: none; font-family: var(--font); white-space: nowrap;
+      transition: background .12s;
+    }
+    .topic-add-btn:hover { background: var(--pink); color: #fff; }
+
+    .topic-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+    .topic-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: 6px;
+      background: var(--pink-faint); border: 1px solid var(--pink-light);
+      font-size: 12px; color: var(--text-1); font-weight: 500;
+    }
+    .topic-tag-remove {
+      color: var(--pink); font-size: 11px; cursor: pointer; font-weight: 800;
+      line-height: 1;
+    }
+    .topic-tag-remove:hover { color: var(--red); }
+
+    /* Right side: gespreksverslag */
+    .modal-section-title {
+      font-size: 13px; font-weight: 700; color: var(--text-1);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .koppel-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: 11px; font-weight: 600; color: var(--text-2);
+      cursor: pointer; transition: all .12s; font-family: var(--font);
+    }
+    .koppel-btn:hover { border-color: var(--pink); color: var(--pink); }
+
+    .modal-textarea {
+      width: 100%; padding: 11px;
+      border: 1px solid var(--border); border-radius: 7px;
+      font-family: var(--font); font-size: 13px; color: var(--text-1);
+      background: var(--bg); resize: vertical; min-height: 120px;
+      outline: none; line-height: 1.5; flex: 1;
+    }
+    .modal-textarea:focus { border-color: var(--pink); background: var(--surface); box-shadow: 0 0 0 3px rgba(229,0,125,.08); }
+
+    /* Bijlage */
+    .bijlage-section { display: flex; flex-direction: column; gap: 8px; }
+    .bijlage-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .bijlage-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 7px;
+      background: var(--bg); border: 1px solid var(--border);
+    }
+    .bijlage-item-name {
+      flex: 1; font-size: 12px; font-weight: 600; color: var(--blue); cursor: pointer;
+    }
+    .bijlage-item-name:hover { text-decoration: underline; }
+    .bijlage-item-meta { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+    .bijlage-ver {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--pink); color: #fff; font-size: 10px; font-weight: 800;
+    }
+    .bijlage-remove {
+      width: 20px; height: 20px; border: none; background: none;
+      cursor: pointer; color: var(--text-3); font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: color .1s;
+    }
+    .bijlage-remove:hover { color: var(--red); }
+
+    .bijlage-add {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--pink);
+      cursor: pointer; padding: 6px 4px;
+    }
+    .bijlage-add:hover { text-decoration: underline; }
+    .bijlage-add .plus {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--pink-light); color: var(--pink);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+    }
+
+    /* Modal footer */
+    .modal-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0; flex-wrap: wrap; gap: 10px;
+    }
+    .modal-footer-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .modal-footer-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .formulier-select {
+      padding: 7px 11px; border-radius: 7px;
+      border: 1px solid var(--border); font-family: var(--font);
+      font-size: 12px; color: var(--text-2); background: var(--surface);
+      outline: none; cursor: pointer;
+    }
+    .formulier-select:focus { border-color: var(--pink); }
+
+    .notitie-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 7px;
+      background: var(--pink); color: #fff;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      border: none; font-family: var(--font);
+      transition: background .12s;
+    }
+    .notitie-btn:hover { background: var(--pink-dark); }
+    .notitie-btn .check { font-size: 13px; }
+
+    .notitie-edit-btn {
+      width: 30px; height: 30px; border-radius: 7px;
+      border: 1px solid var(--pink-light); background: var(--pink-faint);
+      color: var(--pink); font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .12s;
+    }
+    .notitie-edit-btn:hover { background: var(--pink-light); }
+
+    /* ── Notitie collapsible panel ── */
+    .notitie-panel {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height .28s cubic-bezier(.4,0,.2,1), padding .28s ease;
+      border-top: 0px solid var(--border);
+      background: var(--bg);
+      padding: 0 20px;
+    }
+    .notitie-panel.open {
+      max-height: 220px;
+      border-top-width: 1px;
+      padding: 16px 20px;
+    }
+    .notitie-panel-inner {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .notitie-panel-label {
+      font-size: 11px; font-weight: 700; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    .notitie-panel textarea {
+      width: 100%; padding: 10px 11px;
+      border: 1px solid var(--border); border-radius: 7px;
+      font-family: var(--font); font-size: 13px; color: var(--text-1);
+      background: var(--surface); resize: none; height: 110px;
+      outline: none; line-height: 1.5;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .notitie-panel textarea:focus {
+      border-color: var(--pink);
+      box-shadow: 0 0 0 3px rgba(229,0,125,.08);
+      background: var(--surface);
+    }
+    /* Active state for notitie button */
+    .notitie-btn.active {
+      background: var(--pink-dark);
+      box-shadow: 0 0 0 3px rgba(229,0,125,.18);
+    }
+
+    /* ── Modal Responsive ── */
+    @media (max-width: 768px) {
+      .modal-backdrop { padding: 0; align-items: flex-end; }
+      .modal { border-radius: 14px 14px 0 0; max-height: 95vh; max-width: 100%; }
+      .modal-body { grid-template-columns: 1fr; overflow-y: auto; }
+      .modal-left { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+    @media (max-width: 480px) {
+      .modal-header { padding: 14px 16px; }
+      .modal-left, .modal-right { padding: 16px; }
+      .modal-footer { padding: 12px 16px; }
+      .topic-add-row { flex-direction: column; align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <a class="nav-logo" href="dossiers.html">
+    <div class="nav-logo-mark">iH</div>
+    <div class="nav-logo-text">inholland <small>DGRS</small></div>
+  </a>
+  <div class="nav-links">
+    <a class="nav-lnk active" href="dossiers.html">Dossiers</a>
+    <a class="nav-lnk" href="#">Mijn gesprekken</a>
+    <a class="nav-lnk" href="#">Openstaande acties</a>
+    <a class="nav-lnk" href="#">Rapportages</a>
+    <a class="nav-lnk" href="#">Instellingen</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-team-pill">ICT Team ▾</div>
+    <span class="nav-user">A. Gebruiker, <strong>Log uit</strong></span>
+    <div class="nav-ava">AG</div>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <span class="more">···</span>
+    <span class="sep">›</span>
+    <a href="dossiers.html">Dossiers</a>
+    <span class="sep">›</span>
+    <span class="current">John Doe</span>
+  </div>
+
+  <!-- DETAIL LAYOUT -->
+  <div class="detail-layout">
+
+    <!-- ── LEFT: STUDENT CARD ── -->
+    <div class="card student-card">
+      <div class="student-photo-wrap">
+        <div class="student-photo-container">
+          <div class="student-photo">👤</div>
+          <div class="photo-edit">✎</div>
+        </div>
+        <div class="student-name-big">John Doe</div>
+        <div class="student-nr-big">Studentnummer: 1000001</div>
+        <div style="margin-top:8px">
+          <span class="pill pill-green"><span class="pill-dot"></span>Actief</span>
+        </div>
+      </div>
+
+      <div class="student-info">
+        <div class="info-row">
+          <span class="info-label">Klas</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Geboortedatum</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Campus</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Adres</span>
+          <span class="info-value" style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:12px">📍</span> Adres
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Studentnummer</span>
+          <span class="info-value"><a href="#">1000001</a></span>
+          <span class="info-edit">✎</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">E-Mailadres</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Telefoon</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Startdatum opleiding</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Startdatum Inholland</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Instroom</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Domein</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Vorm</span>
+          <span class="info-value muted">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Opleiding</span>
+          <span class="info-value muted">—</span>
+        </div>
+      </div>
+
+      <div class="student-actions">
+        <button class="action-btn pink">📊 Studiepunten</button>
+        <button class="action-btn pink">👁 Studentmonitor</button>
+        <button class="action-btn pink">📋 BSA Advies</button>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: DOSSIER CONTENT ── -->
+    <div class="right-col">
+
+      <!-- Status bar -->
+      <div class="status-bar">
+        <div class="status-label">
+          Status dossier:&nbsp;<span class="pill pill-green" style="font-size:12px"><span class="pill-dot"></span>Actief</span>
+          &nbsp;<span style="color:var(--text-3);font-size:12px">(aangemaakt op 20-05-2026)</span>
+        </div>
+        <div class="status-bar-actions">
+          <span class="action-chip"><span class="chip-icon">↔</span> Overdragen</span>
+          <span class="action-chip"><span class="chip-icon">🖨</span> Printen</span>
+          <span class="action-chip"><span class="chip-icon">📦</span> Archiveren</span>
+          <button class="btn btn-pink btn-sm">💾 Bewaren</button>
+        </div>
+      </div>
+
+      <!-- Overzicht informatie -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Overzicht informatie</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <textarea class="section-textarea" placeholder="Voeg een notitie of samenvatting toe over dit dossier…"></textarea>
+        </div>
+      </div>
+
+      <!-- Verklaring decaan -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Verklaring decaan</div>
+          <div class="add-row" style="padding:0">
+            <div class="plus">+</div> Toevoegen
+          </div>
+        </div>
+        <div class="card-body" style="padding-bottom:10px">
+          <p style="font-size:12px;color:var(--text-3);font-style:italic">Geen verklaring beschikbaar.</p>
+        </div>
+      </div>
+
+      <!-- Bijlage -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Bijlagen</div>
+          <div class="add-row" style="padding:0">
+            <div class="plus">+</div> Bijlage toevoegen
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Table header -->
+          <div style="display:grid;grid-template-columns:1fr 60px 80px 110px 60px;gap:8px;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px">Bestandsnaam</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px">Ver.</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px">Type</span>
+            <span style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px">Datum</span>
+            <span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 60px 80px 110px 60px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+            <a class="bijlage-name">📄 bijlage-100001.png</a>
+            <span class="ver-badge">1</span>
+            <span class="bijlage-meta">PNG</span>
+            <span class="bijlage-meta">04-06-2026</span>
+            <button class="del-btn">✕</button>
+          </div>
+          <div style="padding-top:10px">
+            <div class="add-row">
+              <div class="plus">+</div> Bijlage toevoegen
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contactmomenten -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Contactmomenten student</div>
+            <div class="card-subtitle">1 contactmoment</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-ghost btn-sm">⬇ Exporteer</button>
+            <button class="btn btn-pink btn-sm">+ Nieuw contactmoment</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Datum <span class="sort">↕</span></th>
+                <th>Decaan</th>
+                <th>Hoofdonderwerp</th>
+                <th>Subonderwerp</th>
+                <th>Gespreksverslag</th>
+                <th>Actie</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr onclick="openContactmoment()" style="cursor:pointer">
+                <td><div class="type-icon gesprek">💬</div></td>
+                <td style="font-weight:600;color:var(--text-1)">04-06-2026</td>
+                <td>A. Gebruiker</td>
+                <td>Bijzondere omstandigheden</td>
+                <td>Bestuursactiviteiten</td>
+                <td style="font-size:12px;color:var(--text-3)">test notitie...</td>
+                <td><span class="pill pill-gray" style="font-size:10px">Geen actie</span></td>
+                <td>
+                  <div class="row-actions" style="opacity:1">
+                    <div class="btn-icon">✎</div>
+                    <div class="btn-icon">✕</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+          <span>1 van 1</span>
+        </div>
+      </div>
+
+    </div><!-- end right-col -->
+  </div><!-- end detail-layout -->
+</div>
+
+<!-- ── CONTACTMOMENT MODAL ── -->
+<div class="modal-backdrop" id="contactmomentModal" onclick="handleBackdropClick(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <!-- Modal header -->
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Contactmoment voor (John Doe)</div>
+      <button class="modal-close" onclick="closeContactmoment()" title="Sluiten">✕</button>
+    </div>
+
+    <!-- Modal body: left + right -->
+    <div class="modal-body">
+
+      <!-- LEFT: form fields -->
+      <div class="modal-left">
+
+        <!-- Datum -->
+        <div class="modal-field">
+          <label class="modal-field-label">Datum</label>
+          <input class="modal-input" type="datetime-local" value="2026-06-04T23:21" />
+        </div>
+
+        <!-- Decaan -->
+        <div class="modal-field">
+          <label class="modal-field-label">Decaan</label>
+          <select class="modal-select">
+            <option selected>Sirilak Pompan</option>
+            <option>Mark Peters</option>
+            <option>Anna de Vries</option>
+            <option>Rob Janssen</option>
+          </select>
+        </div>
+
+        <!-- Type contact -->
+        <div class="modal-field">
+          <label class="modal-field-label">Type contact</label>
+          <select class="modal-select">
+            <option selected>Gesprek</option>
+            <option>E-mail</option>
+            <option>Telefoon</option>
+            <option>Teams</option>
+          </select>
+        </div>
+
+        <!-- Actie -->
+        <div class="modal-field">
+          <label class="modal-field-label">Actie</label>
+          <select class="modal-select">
+            <option selected>Geen actie</option>
+            <option>Opvolging vereist</option>
+            <option>Doorverwijzing</option>
+            <option>BSA advies</option>
+          </select>
+        </div>
+
+        <!-- Onderwerp -->
+        <div class="modal-field">
+          <label class="modal-field-label">Onderwerp</label>
+          <div class="topic-add-row">
+            <select class="modal-select" id="hoofdonderwerp" onchange="updateSubonderwerp()">
+              <option value="">— Hoofdonderwerp —</option>
+              <option value="bijzonder" selected>Bijzondere omstandigheden</option>
+              <option value="studie">Studievoortgang</option>
+              <option value="welzijn">Welzijn</option>
+              <option value="financieel">Financieel</option>
+            </select>
+          </div>
+          <div class="topic-add-row" style="margin-top:6px">
+            <select class="modal-select" id="subonderwerp">
+              <option value="">— Subonderwerp —</option>
+              <option value="bestuur" selected>Bestuursactiviteiten</option>
+              <option value="ziekte">Ziekte/beperking</option>
+              <option value="familie">Familieomstandigheden</option>
+            </select>
+            <button class="topic-add-btn" onclick="addTopic()">+ Voeg toe</button>
+          </div>
+        </div>
+
+        <!-- Topic tags -->
+        <div class="topic-tags" id="topicTags">
+          <span class="topic-tag">
+            Bijzondere omstandigheden &rsaquo; Bestuursactiviteiten
+            <span class="topic-tag-remove" onclick="removeTag(this)" title="Verwijder">✕</span>
+          </span>
+          <span class="topic-tag">
+            Studievoortgang &rsaquo; Vertraging door omstandigheden
+            <span class="topic-tag-remove" onclick="removeTag(this)" title="Verwijder">✕</span>
+          </span>
+          <span class="topic-tag">
+            Welzijn &rsaquo; Psychische klachten
+            <span class="topic-tag-remove" onclick="removeTag(this)" title="Verwijder">✕</span>
+          </span>
+          <span class="topic-tag">
+            Financieel &rsaquo; Studiefinanciering
+            <span class="topic-tag-remove" onclick="removeTag(this)" title="Verwijder">✕</span>
+          </span>
+        </div>
+
+      </div><!-- end modal-left -->
+
+      <!-- RIGHT: verslag + bijlage -->
+      <div class="modal-right">
+
+        <!-- Gespreksverslag -->
+        <div class="modal-field" style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <div class="modal-section-title">
+            Gespreksverslag
+            <button class="koppel-btn">✉ Koppel emails</button>
+          </div>
+          <textarea class="modal-textarea" placeholder="Voer het gespreksverslag in…">test</textarea>
+        </div>
+
+        <!-- Bijlage -->
+        <div class="bijlage-section">
+          <div class="bijlage-section-header">
+            <span style="font-size:13px;font-weight:700;color:var(--text-1)">Bijlage</span>
+            <button class="modal-close" style="font-size:11px;width:auto;height:auto;padding:4px 8px;border-radius:6px;border-color:var(--red);color:var(--red)" onclick="clearBijlagen()">✕</button>
+          </div>
+          <div id="bijlagenList">
+            <div class="bijlage-item">
+              <span style="font-size:16px">🖼</span>
+              <span class="bijlage-item-name">a-50-512.png</span>
+              <span class="bijlage-ver">1</span>
+              <span class="bijlage-item-meta">0.02 MB</span>
+              <button class="bijlage-remove" onclick="this.closest('.bijlage-item').remove()">✕</button>
+            </div>
+            <div class="bijlage-item">
+              <span style="font-size:16px">📄</span>
+              <span class="bijlage-item-name">verklaring-studentendecaan.pdf</span>
+              <span class="bijlage-ver">2</span>
+              <span class="bijlage-item-meta">0.14 MB</span>
+              <button class="bijlage-remove" onclick="this.closest('.bijlage-item').remove()">✕</button>
+            </div>
+            <div class="bijlage-item">
+              <span style="font-size:16px">📊</span>
+              <span class="bijlage-item-name">studievoortgang-overzicht.xlsx</span>
+              <span class="bijlage-ver">1</span>
+              <span class="bijlage-item-meta">0.38 MB</span>
+              <button class="bijlage-remove" onclick="this.closest('.bijlage-item').remove()">✕</button>
+            </div>
+          </div>
+          <label class="bijlage-add" style="cursor:pointer">
+            <span class="plus">+</span> Bijlage toevoegen
+            <input type="file" style="display:none" onchange="addBijlage(this)" />
+          </label>
+        </div>
+
+      </div><!-- end modal-right -->
+    </div><!-- end modal-body -->
+
+    <!-- Notitie collapsible panel -->
+    <div class="notitie-panel" id="notitiePanel">
+      <div class="notitie-panel-inner">
+        <span class="notitie-panel-label">Notitie</span>
+        <textarea id="notitieText" placeholder="Voeg een interne notitie toe…"></textarea>
+      </div>
+    </div>
+
+    <!-- Modal footer -->
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <select class="formulier-select">
+          <option selected>Verklaring studentendecaan</option>
+          <option>BSA formulier</option>
+          <option>Doorverwijzing formulier</option>
+        </select>
+        <button class="btn btn-ghost btn-sm">+ Formulier toevoegen</button>
+      </div>
+      <div class="modal-footer-right">
+        <button class="notitie-btn" id="notitieBtn" onclick="toggleNotitie()">
+          <span class="check">✓</span> Notitie
+        </button>
+        <button class="notitie-edit-btn" title="Bewerken">✎</button>
+      </div>
+    </div>
+
+  </div><!-- end modal -->
+</div><!-- end modal-backdrop -->
+
+<script>
+  function openContactmoment() {
+    document.getElementById('contactmomentModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeContactmoment() {
+    document.getElementById('contactmomentModal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target === document.getElementById('contactmomentModal')) {
+      closeContactmoment();
+    }
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeContactmoment();
+  });
+
+  function addTopic() {
+    const h = document.getElementById('hoofdonderwerp');
+    const s = document.getElementById('subonderwerp');
+    const hText = h.options[h.selectedIndex].text;
+    const sText = s.options[s.selectedIndex].text;
+    if (!h.value || !s.value) return;
+    const tag = document.createElement('span');
+    tag.className = 'topic-tag';
+    tag.innerHTML = hText + ' &rsaquo; ' + sText +
+      '<span class="topic-tag-remove" onclick="removeTag(this)" title="Verwijder">✕</span>';
+    document.getElementById('topicTags').appendChild(tag);
+  }
+
+  function removeTag(el) {
+    el.closest('.topic-tag').remove();
+  }
+
+  function addBijlage(input) {
+    if (!input.files.length) return;
+    const file = input.files[0];
+    const sizeMB = (file.size / 1048576).toFixed(2);
+    const item = document.createElement('div');
+    item.className = 'bijlage-item';
+    item.innerHTML = '<span style="font-size:16px">📄</span>' +
+      '<span class="bijlage-item-name">' + file.name + '</span>' +
+      '<span class="bijlage-ver">1</span>' +
+      '<span class="bijlage-item-meta">' + sizeMB + ' MB</span>' +
+      '<button class="bijlage-remove" onclick="this.closest(\'.bijlage-item\').remove()">✕</button>';
+    document.getElementById('bijlagenList').appendChild(item);
+    input.value = '';
+  }
+
+  function clearBijlagen() {
+    document.getElementById('bijlagenList').innerHTML = '';
+  }
+
+  function updateSubonderwerp() {
+    // placeholder for dynamic subonderwerp loading
+  }
+
+  function toggleNotitie() {
+    const panel = document.getElementById('notitiePanel');
+    const btn   = document.getElementById('notitieBtn');
+    const isOpen = panel.classList.toggle('open');
+    btn.classList.toggle('active', isOpen);
+    if (isOpen) {
+      // focus textarea after transition
+      setTimeout(function() {
+        document.getElementById('notitieText').focus();
+      }, 280);
+    }
+  }
+</script>
+
+</body>
+</html>

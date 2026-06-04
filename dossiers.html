@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGRS – Dossiers</title>
+  <link rel="stylesheet" href="_shared.css" />
+  <style>
+    /* Page-specific extras */
+    .page-head {
+      display: flex; align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .page-title { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+    .page-sub { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+
+    /* Filter toolbar */
+    .toolbar {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .filter-source {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--text-2);
+    }
+    .filter-source span { font-weight: 400; }
+    .filter-select {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; padding: 5px 10px;
+      font-family: var(--font); font-size: 13px; font-weight: 600;
+      color: var(--text-1); cursor: pointer;
+    }
+    .filter-count { color: var(--text-3); font-weight: 400; font-size: 12px; }
+
+    .toolbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .search-box {
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+    .search-box input {
+      border: none; background: transparent;
+      font-family: var(--font); font-size: 12px;
+      color: var(--text-1); width: 200px; outline: none;
+    }
+    .search-box input::placeholder { color: var(--text-3); }
+    .search-icon { color: var(--text-3); font-size: 13px; }
+
+    /* Table cell avatar */
+    .cell-student { display: flex; align-items: center; gap: 10px; }
+    .ava {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--pink); color: #fff;
+      font-weight: 700; font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .ava.c2 { background: #0ABFBC; } .ava.c3 { background: #8B5CF6; }
+    .ava.c4 { background: #F97316; } .ava.c5 { background: #22C55E; }
+    .ava.c6 { background: #64748B; } .ava.c7 { background: #EC4899; }
+    .ava.c8 { background: #0EA5E9; } .ava.c9 { background: #84CC16; }
+    .ava.c10 { background: #A855F7; } .ava.c11 { background: #6366F1; }
+    .ava-empty { background: var(--border); color: var(--text-3); }
+
+    .cell-name { font-weight: 600; color: var(--text-1); font-size: 13px; }
+    .cell-nr { font-size: 11px; color: var(--text-3); }
+
+    .decaan-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; color: var(--text-2);
+    }
+    .decaan-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); flex-shrink: 0; }
+    .decaan-dot.d2 { background: #0ABFBC; }
+    .decaan-dot.d3 { background: #8B5CF6; }
+
+    .row-actions {
+      display: flex; gap: 4px; opacity: 0;
+      transition: opacity .1s;
+    }
+    .tbl tbody tr:hover .row-actions { opacity: 1; }
+
+    /* Pagination */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+    }
+    .page-info { font-size: 12px; color: var(--text-3); }
+    .page-btns { display: flex; gap: 3px; }
+    .page-btn {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 12px; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-2); font-family: var(--font); transition: all .1s;
+    }
+    .page-btn:hover { border-color: var(--pink); color: var(--pink); }
+    .page-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+    .page-size {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-3);
+    }
+    .page-size select {
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 3px 6px; font-family: var(--font); font-size: 12px;
+      background: var(--surface); color: var(--text-2); outline: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .page-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .toolbar { gap: 6px; }
+      .toolbar-right { margin-left: 0; width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+      .search-box input { width: 160px; }
+    }
+
+    @media (max-width: 768px) {
+      .page-head { margin-bottom: 12px; }
+      .page-title { font-size: 17px; }
+      .filter-source { flex-wrap: wrap; gap: 6px; }
+      .toolbar { flex-direction: column; align-items: flex-start; }
+      .toolbar-right { width: 100%; }
+      .search-box { flex: 1; }
+      .search-box input { width: 100%; }
+      /* Hide less important columns on mobile */
+      .tbl th:nth-child(2),
+      .tbl td:nth-child(2) { display: none; } /* hide Voornaam duplicate col — keep cell-student */
+      .tbl th:nth-child(5),
+      .tbl td:nth-child(5) { display: none; } /* hide Decaan */
+      .tbl th:nth-child(6),
+      .tbl td:nth-child(6) { display: none; } /* hide Team */
+      .tbl th:last-child,
+      .tbl td:last-child { display: none; } /* hide row-actions */
+      /* Pagination */
+      .pagination { flex-direction: column; gap: 8px; align-items: center; }
+    }
+
+    @media (max-width: 480px) {
+      .tbl th:nth-child(4),
+      .tbl td:nth-child(4) { display: none; } /* hide Studentnummer */
+      .page-btns .page-btn:not(.active):not(:first-child):not(:last-child) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <a class="nav-logo" href="dossiers.html">
+    <div class="nav-logo-mark">iH</div>
+    <div class="nav-logo-text">inholland <small>DGRS</small></div>
+  </a>
+  <div class="nav-links">
+    <a class="nav-lnk active" href="dossiers.html">Dossiers</a>
+    <a class="nav-lnk" href="#">Mijn gesprekken</a>
+    <a class="nav-lnk" href="#">Openstaande acties</a>
+    <a class="nav-lnk" href="#">Rapportages</a>
+    <a class="nav-lnk" href="#">Instellingen</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-team-pill">ICT Team ▾</div>
+    <span class="nav-user">A. Gebruiker, <strong>Log uit</strong></span>
+    <div class="nav-ava">AG</div>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- BREADCRUMB -->
+  <div class="breadcrumb">
+    <span class="more">···</span>
+    <span class="sep">›</span>
+    <span class="current">Dossiers</span>
+  </div>
+
+  <!-- PAGE HEAD -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Dossiers</div>
+      <div class="page-sub">Beheer en bekijk alle studentdossiers</div>
+    </div>
+    <a href="dossier-detail.html" class="btn btn-pink">+ Voeg toe</a>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="filter-source">
+      Dossiers van
+      <div class="filter-select">Team dossiers ▾</div>
+      <span class="filter-count">(11 van 11)</span>
+    </div>
+    <div class="toolbar-right">
+      <div class="search-box">
+        <span class="search-icon">⌕</span>
+        <input type="text" placeholder="Zoek op naam, studentnummer…" />
+      </div>
+      <button class="btn btn-ghost btn-sm">⚙ Kolommen</button>
+      <button class="btn btn-ghost btn-sm">⬇ Exporteer</button>
+    </div>
+  </div>
+
+  <!-- TABLE CARD -->
+  <div class="card">
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></th>
+            <th>Voornaam <span class="sort">↕</span></th>
+            <th>Achternaam <span class="sort">↕</span></th>
+            <th>Studentnummer <span class="sort">↕</span></th>
+            <th>Decaan <span class="sort">↕</span></th>
+            <th>Team <span class="sort">↕</span></th>
+            <th>Status</th>
+            <th>Datum <span class="sort">↕</span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava">JD</div><span class="cell-name">John</span></div></td>
+            <td>Doe</td>
+            <td>1000001</td>
+            <td><span class="decaan-chip"><span class="decaan-dot"></span> Mark Peters</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-green"><span class="pill-dot"></span>Actief</span></td>
+            <td>20-05-2026</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c2">JS</div><span class="cell-name">Jane</span></div></td>
+            <td>Smith</td>
+            <td>1000002</td>
+            <td><span class="decaan-chip"><span class="decaan-dot"></span> Mark Peters</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-green"><span class="pill-dot"></span>Actief</span></td>
+            <td>02-05-2025</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c3">AJ</div><span class="cell-name">Alex</span></div></td>
+            <td>Johnson</td>
+            <td>1000003</td>
+            <td><span class="decaan-chip"><span class="decaan-dot"></span> Mark Peters</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-orange"><span class="pill-dot"></span>Openstaand</span></td>
+            <td>21-03-2025</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c4">SW</div><span class="cell-name">Sam</span></div></td>
+            <td>Williams</td>
+            <td>1000004</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d2"></span> Anna de Vries</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-pink"><span class="pill-dot"></span>Nieuw</span></td>
+            <td>06-02-2025</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c5">CB</div><span class="cell-name">Chris</span></div></td>
+            <td>Brown</td>
+            <td>1000005</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d2"></span> Anna de Vries</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-green"><span class="pill-dot"></span>Actief</span></td>
+            <td>17-07-2024</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c6">EW</div><span class="cell-name">Emma</span></div></td>
+            <td>Wilson</td>
+            <td>1000006</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d2"></span> Anna de Vries</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-gray">Gesloten</span></td>
+            <td>05-07-2024</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c7">LM</div><span class="cell-name">Lucas</span></div></td>
+            <td>Martin</td>
+            <td>1000007</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d2"></span> Anna de Vries</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-green"><span class="pill-dot"></span>Actief</span></td>
+            <td>05-07-2024</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c8">OT</div><span class="cell-name">Oliver</span></div></td>
+            <td>Taylor</td>
+            <td>1000008</td>
+            <td><span class="decaan-chip"><span class="decaan-dot"></span> Mark Peters</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-orange"><span class="pill-dot"></span>Openstaand</span></td>
+            <td>25-06-2024</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava ava-empty">—</div><span class="cell-name" style="color:var(--text-3);font-weight:400">—</span></div></td>
+            <td style="color:var(--text-3)">—</td>
+            <td style="color:var(--text-3); font-style:italic">test.student</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d2"></span> Anna de Vries</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-gray">Concept</span></td>
+            <td>25-06-2024</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c9">SA</div><span class="cell-name">Sophie</span></div></td>
+            <td>Anderson</td>
+            <td>1000010</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d2"></span> Anna de Vries</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-green"><span class="pill-dot"></span>Actief</span></td>
+            <td>16-05-2024</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+          <tr onclick="window.location='dossier-detail.html'">
+            <td><input type="checkbox" style="accent-color:var(--pink);cursor:pointer" /></td>
+            <td><div class="cell-student"><div class="ava c10">JL</div><span class="cell-name">Jessica</span></div></td>
+            <td>Lee</td>
+            <td>1000011</td>
+            <td><span class="decaan-chip"><span class="decaan-dot d3"></span> Rob Janssen</span></td>
+            <td>ICT Team</td>
+            <td><span class="pill pill-gray">Gesloten</span></td>
+            <td>17-02-2021</td>
+            <td><div class="row-actions"><div class="btn-icon">✎</div><div class="btn-icon">⋯</div></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer">
+      <div class="page-size">
+        Rijen:
+        <select><option>20</option><option>50</option><option>100</option></select>
+        &nbsp;· 1–11 van 11
+      </div>
+      <div class="page-btns">
+        <button class="page-btn">‹</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">›</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
